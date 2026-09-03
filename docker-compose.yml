@@ -14,6 +14,9 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    # Permite crear la base SQLite en el volumen bind del host.
+    cap_add:
+      - DAC_OVERRIDE
     pids_limit: 256
     mem_limit: 256m
     cpus: 1.0
