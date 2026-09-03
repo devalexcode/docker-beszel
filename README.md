@@ -21,7 +21,9 @@ Beszel permite monitorear:
 ```text
 /var/docker/beszel/
 ├── docker-compose.yml
+├── install.sh
 ├── .env
+├── .env.example
 ├── README.md
 ├── beszel_data/
 ├── beszel_agent_data/
@@ -30,152 +32,43 @@ Beszel permite monitorear:
 
 ---
 
-## 1. Crear la carpeta
+## Instalación
+
+### Requisitos
+
+- Docker Engine en ejecución.
+- Docker Compose v2 (`docker compose`).
+- Permiso para acceder a Docker.
+
+### 1. Obtener el proyecto
 
 ```bash
-sudo mkdir -p /var/docker/beszel
-sudo chown -R $USER:$USER /var/docker/beszel
-
-cd /var/docker/beszel
+git clone <URL_DEL_REPOSITORIO> beszel
+cd beszel
 ```
 
----
+### 2. Configurar la URL pública
 
-## 2. Crear el archivo `.env`
-
-Crea el archivo:
+Crea tu archivo de configuración local y reemplaza la URL de ejemplo por el dominio que usarás:
 
 ```bash
+cp .env.example .env
 nano .env
 ```
 
-Contenido:
-
-```env
-# ==========================================
-# BESZEL HUB
-# ==========================================
-
-BESZEL_IMAGE=henrygd/beszel:latest
-BESZEL_CONTAINER_NAME=beszel
-
-# Puerto local del Hub
-BESZEL_PORT=8090
-
-# URL pública configurada en Caddy
-BESZEL_APP_URL=https://monitor.tudominio.com
-
-
-# ==========================================
-# BESZEL AGENT
-# ==========================================
-
-BESZEL_AGENT_IMAGE=henrygd/beszel-agent:latest
-BESZEL_AGENT_CONTAINER_NAME=beszel-agent
-
-# Como el Agent usa network_mode: host,
-# localhost:8090 apunta al Hub publicado en el host.
-BESZEL_AGENT_HUB_URL=http://localhost:8090
-
-# Se obtienen desde Beszel al agregar el sistema.
-BESZEL_AGENT_TOKEN=
-BESZEL_AGENT_KEY=
-```
-
-Cambia:
-
 ```env
 BESZEL_APP_URL=https://monitor.tudominio.com
 ```
 
-por el dominio que usarás.
+Si ya existe un archivo `.env`, edita ese archivo; el instalador nunca lo sobrescribe. Si omites este paso, el instalador creará `.env` a partir de la plantilla.
 
----
-
-## 3. Crear `docker-compose.yml`
-
-Crea el archivo:
+### 3. Ejecutar el instalador
 
 ```bash
-nano docker-compose.yml
+./install.sh
 ```
 
-Contenido:
-
-```yaml
-services:
-
-  # ==========================================
-  # BESZEL HUB
-  # Dashboard web
-  # ==========================================
-  beszel:
-    image: ${BESZEL_IMAGE}
-    container_name: ${BESZEL_CONTAINER_NAME}
-    restart: unless-stopped
-
-    environment:
-      APP_URL: ${BESZEL_APP_URL}
-
-    ports:
-      - "127.0.0.1:${BESZEL_PORT}:8090"
-
-    volumes:
-      - ./beszel_data:/beszel_data
-      - ./beszel_socket:/beszel_socket
-
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "/beszel",
-          "health",
-          "--url",
-          "http://localhost:8090"
-        ]
-      interval: 120s
-      start_period: 10s
-      timeout: 5s
-
-
-  # ==========================================
-  # BESZEL AGENT
-  # Monitorea este servidor
-  # ==========================================
-  beszel-agent:
-    image: ${BESZEL_AGENT_IMAGE}
-    container_name: ${BESZEL_AGENT_CONTAINER_NAME}
-    restart: unless-stopped
-
-    network_mode: host
-
-    volumes:
-      - ./beszel_agent_data:/var/lib/beszel-agent
-      - ./beszel_socket:/beszel_socket
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-
-    environment:
-      LISTEN: /beszel_socket/beszel.sock
-      HUB_URL: ${BESZEL_AGENT_HUB_URL}
-      TOKEN: ${BESZEL_AGENT_TOKEN}
-      KEY: ${BESZEL_AGENT_KEY}
-
-    healthcheck:
-      test: ["CMD", "/agent", "health"]
-      interval: 120s
-      start_period: 10s
-      timeout: 5s
-```
-
----
-
-## 4. Levantar Beszel
-
-Ejecuta:
-
-```bash
-docker compose up -d
-```
+El script crea `.env` desde `.env.example` cuando sea necesario, prepara los directorios persistentes y ejecuta `docker compose up -d`.
 
 Comprueba los contenedores:
 
@@ -204,12 +97,12 @@ docker logs -f beszel-agent
 
 ---
 
-## 5. Configurar Caddy
+## 4. Configurar Caddy
 
 Beszel solamente está publicado localmente en:
 
 ```text
-127.0.0.1:8090
+127.0.0.1:7777
 ```
 
 Esto evita exponer directamente el puerto de Beszel a Internet.
@@ -224,7 +117,7 @@ Agrega:
 
 ```caddyfile
 monitor.tudominio.com {
-    reverse_proxy 127.0.0.1:8090
+    reverse_proxy 127.0.0.1:7777
 }
 ```
 
@@ -250,7 +143,7 @@ https://monitor.tudominio.com
 
 ---
 
-## 6. Crear la cuenta de administrador
+## 5. Crear la cuenta de administrador
 
 En el primer acceso a Beszel deberás crear la cuenta de administrador.
 
@@ -264,7 +157,7 @@ Completa el registro inicial.
 
 ---
 
-## 7. Agregar el servidor
+## 6. Agregar el servidor
 
 Dentro de Beszel selecciona:
 
@@ -293,7 +186,7 @@ Guarda:
 
 ---
 
-## 8. Agregar TOKEN y KEY al `.env`
+## 7. Agregar TOKEN y KEY al `.env`
 
 Edita:
 
@@ -312,7 +205,7 @@ Guarda el archivo.
 
 ---
 
-## 9. Recrear el Agent
+## 8. Recrear el Agent
 
 Ejecuta:
 
@@ -334,7 +227,7 @@ docker logs -f beszel-agent
 
 ---
 
-## 10. Verificar el monitoreo
+## 9. Verificar el monitoreo
 
 Dentro del dashboard deberías empezar a ver información del servidor:
 
@@ -368,7 +261,7 @@ El socket está montado como solo lectura:
 
 ---
 
-## 11. Crear alertas
+## 10. Crear alertas
 
 Desde la interfaz de Beszel puedes crear alertas para recursos del servidor.
 
@@ -386,59 +279,6 @@ Para CPU, evita alertar por picos momentáneos. Es preferible configurar una dur
 
 ---
 
-## Comandos útiles
-
-### Ver estado
-
-```bash
-docker compose ps
-```
-
-### Ver logs del Hub
-
-```bash
-docker logs -f beszel
-```
-
-### Ver logs del Agent
-
-```bash
-docker logs -f beszel-agent
-```
-
-### Reiniciar Beszel
-
-```bash
-docker compose restart
-```
-
-### Detener Beszel
-
-```bash
-docker compose down
-```
-
-### Volver a levantarlo
-
-```bash
-docker compose up -d
-```
-
-### Actualizar las imágenes
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-### Ver consumo de Beszel
-
-```bash
-docker stats beszel beszel-agent
-```
-
----
-
 ## Seguridad
 
 El Hub está publicado de esta forma:
@@ -448,7 +288,7 @@ ports:
   - "127.0.0.1:${BESZEL_PORT}:8090"
 ```
 
-Por lo tanto, el puerto `8090` solamente está disponible desde el propio servidor.
+Por lo tanto, el puerto `7777` solamente está disponible desde el propio servidor.
 
 El acceso desde Internet ocurre únicamente mediante:
 
@@ -457,12 +297,12 @@ Internet
    ↓
 HTTPS / Caddy
    ↓
-127.0.0.1:8090
+127.0.0.1:7777
    ↓
 Beszel
 ```
 
-No es necesario abrir el puerto `8090` en el firewall.
+No es necesario abrir el puerto `7777` en el firewall.
 
 ---
 
@@ -487,27 +327,3 @@ Y el socket de comunicación entre Hub y Agent:
 ```
 
 No elimines estas carpetas si quieres conservar la configuración y el histórico.
-
----
-
-## Respaldo
-
-Para respaldar Beszel puedes comprimir sus datos:
-
-```bash
-cd /var/docker/beszel
-
-tar -czf beszel-backup.tar.gz \
-    beszel_data \
-    beszel_agent_data
-```
-
-También conviene conservar:
-
-```text
-.env
-docker-compose.yml
-README.md
-```
-
-No publiques el archivo `.env` en un repositorio Git si contiene tokens o llaves privadas.

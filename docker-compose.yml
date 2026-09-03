@@ -56,7 +56,7 @@ services:
       LISTEN: /beszel_socket/beszel.sock
 
       # Como usa network_mode host,
-      # localhost:8090 apunta al puerto publicado por Beszel
+      # localhost:7777 apunta al puerto publicado por Beszel
       HUB_URL: ${BESZEL_AGENT_HUB_URL}
 
       TOKEN: ${BESZEL_AGENT_TOKEN}
