@@ -1,0 +1,69 @@
+services:
+  # ==========================================
+  # BESZEL HUB
+  # Dashboard web
+  # ==========================================
+  beszel:
+    image: henrygd/beszel:latest
+    container_name: ${BESZEL_CONTAINER_NAME}
+    restart: unless-stopped
+
+    environment:
+      APP_URL: ${BESZEL_APP_URL}
+
+    ports:
+      # Solo accesible localmente.
+      # Caddy será quien lo exponga por HTTPS.
+      - "127.0.0.1:${BESZEL_PORT}:8090"
+
+    volumes:
+      # Base de datos y configuración
+      - ./beszel_data:/beszel_data
+
+      # Comunicación local con el Agent
+      - ./beszel_socket:/beszel_socket
+
+    healthcheck:
+      test: ["CMD", "/beszel", "health", "--url", "http://localhost:8090"]
+      interval: 120s
+      start_period: 10s
+      timeout: 5s
+
+  # ==========================================
+  # BESZEL AGENT
+  # Monitorea este servidor
+  # ==========================================
+  beszel-agent:
+    image: ${BESZEL_AGENT_IMAGE}
+    container_name: ${BESZEL_AGENT_CONTAINER_NAME}
+    restart: unless-stopped
+
+    # Necesario para obtener correctamente
+    # estadísticas de red del host
+    network_mode: host
+
+    volumes:
+      # Datos persistentes del Agent
+      - ./beszel_agent_data:/var/lib/beszel-agent
+
+      # Comunicación con Hub
+      - ./beszel_socket:/beszel_socket
+
+      # Permite monitorear todos los contenedores Docker
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    environment:
+      LISTEN: /beszel_socket/beszel.sock
+
+      # Como usa network_mode host,
+      # localhost:8090 apunta al puerto publicado por Beszel
+      HUB_URL: ${BESZEL_AGENT_HUB_URL}
+
+      TOKEN: ${BESZEL_AGENT_TOKEN}
+      KEY: ${BESZEL_AGENT_KEY}
+
+    healthcheck:
+      test: ["CMD", "/agent", "health"]
+      interval: 120s
+      start_period: 10s
+      timeout: 5s
