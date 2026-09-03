@@ -43,8 +43,8 @@ Beszel permite monitorear:
 ### 1. Obtener el proyecto
 
 ```bash
-git clone <URL_DEL_REPOSITORIO> beszel
-cd beszel
+git clone https://github.com/devalexcode/docker-beszel.git
+cd docker-beszel
 ```
 
 ### 2. Configurar la URL pública
