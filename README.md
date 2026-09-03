@@ -281,6 +281,8 @@ Para CPU, evita alertar por picos momentáneos. Es preferible configurar una dur
 
 ## Seguridad
 
+Las imágenes están fijadas a la versión `0.18.8`. Actualízalas de forma controlada y mantén Hub y Agent en la misma versión; no sustituyas esas referencias por `latest`.
+
 El Hub está publicado de esta forma:
 
 ```yaml
@@ -303,6 +305,10 @@ Beszel
 ```
 
 No es necesario abrir el puerto `7777` en el firewall.
+
+El Agent usa `network_mode: host` y acceso al socket Docker para recopilar métricas. Esos permisos son necesarios para esta configuración, pero hacen que el Agent sea un componente de alta confianza: no expongas el Hub sin HTTPS y no concedas cuentas a usuarios no confiables.
+
+Como capas adicionales, ambos contenedores usan sistema de archivos de solo lectura, eliminan todas las capacidades Linux, impiden ganar privilegios, limitan procesos/recursos y rotan sus logs.
 
 ---
 

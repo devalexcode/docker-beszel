@@ -4,9 +4,28 @@ services:
   # Dashboard web
   # ==========================================
   beszel:
-    image: henrygd/beszel:latest
+    # Versión fijada para evitar actualizaciones inesperadas.
+    image: henrygd/beszel:0.18.8
     container_name: ${BESZEL_CONTAINER_NAME}
     restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 256m
+    cpus: 1.0
+
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
 
     environment:
       APP_URL: ${BESZEL_APP_URL}
@@ -34,9 +53,28 @@ services:
   # Monitorea este servidor
   # ==========================================
   beszel-agent:
-    image: ${BESZEL_AGENT_IMAGE}
+    # Debe mantenerse en la misma versión que el Hub.
+    image: henrygd/beszel-agent:0.18.8
     container_name: ${BESZEL_AGENT_CONTAINER_NAME}
     restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 256m
+    cpus: 1.0
+
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,mode=1777
+
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
 
     # Necesario para obtener correctamente
     # estadísticas de red del host
